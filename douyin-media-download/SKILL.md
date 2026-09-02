@@ -5,7 +5,7 @@ description: 下载抖音作品（视频/图文/实况图）并产出 MP4 + 循�
 
 # Douyin Media Download
 
-下载抖音作品为 MP4（带声音）+ 循环 GIF，按 `<根>/video/<作品ID>.mp4` + `<根>/gif/<作品ID>.gif` 归档（默认根 `D:\douyinVideo`）。
+下载抖音作品为 MP4（带声音）+ 循环 GIF，按 `<根>/video/<作品ID>.mp4` + `<根>/gif/<作品ID>.gif` 归档（输出根：第二个参数 > 环境变量 `DOUYIN_OUT_ROOT` > 当前目录下 `./douyinVideo`）。
 
 ## 快速开始
 
@@ -26,11 +26,12 @@ bash scripts/dy_fetch.sh "https://www.douyin.com/jingxuan/search/xxx?modal_id=74
 6. **ffprobe 强制断言视频流存在**：第一个 playAddr 可能是纯音频 M4A（背景曲坑），无视频流就换下一条直链。
 7. 转 GIF 用 palettegen 两段式（`palettegen=stats_mode=diff` + `paletteuse`）。体积经验值：360px/12fps ≈ 1.4MB/秒；**时长 >8s 自动降到 320px/10fps**，>15s 考虑截段，全长 GIF 必然 10MB+。
 
-## 环境依赖（Windows 实测）
+## 环境依赖
 
-- Chrome：`C:/Program Files/Google/Chrome/Application/chrome.exe`
-- ffmpeg/ffprobe 8.x（Git Bash 环境直接可用）
+- Chrome 或 Edge（脚本自动探测常见安装路径；可用 `CHROME_BIN` 环境变量指定）
+- ffmpeg/ffprobe、curl（加入 PATH 即可，Windows 建议 Git Bash 环境运行）
 - 网络：douyin.com 可直连
+- 可选环境变量：`DOUYIN_OUT_ROOT`（默认输出根）、`CHROME_BIN`（浏览器路径）
 
 ## 排障
 

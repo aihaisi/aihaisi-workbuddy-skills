@@ -1,0 +1,8 @@
+{
+  "name": "douyin-media-download",
+  "description": "下载抖音作品（视频/图文/实况图）并产出 MP4 + 循环 GIF。实测管线：Chrome headless 渲染 → 特征抽直链 → 即取即下 → ffprobe 断言 → 转 GIF",
+  "category": "development",
+  "visibility": "public",
+  "skill_id": "96ee7ff0-d9b6-4bb5-8d01-dd3eca5d3147",
+  "slug": "a3520852/douyin-media-download"
+}

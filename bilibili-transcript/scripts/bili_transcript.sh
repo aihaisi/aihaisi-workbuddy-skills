@@ -11,6 +11,14 @@ TMP="$(dirname "${OUT:-.}")/bili_tmp_$$"   # 不用 mktemp：沙箱/安全钩子
 mkdir -p "$TMP"
 trap 'rm -rf "$TMP"' EXIT
 
+# 原生 Windows 程序（curl/ffprobe/python）不认 POSIX 路径，且部分沙箱环境禁用了 MSYS
+# 自动转换（MSYS2_ARG_CONV_EXCL=*）。统一显式转换；非 MSYS 环境原样返回。
+if command -v cygpath >/dev/null 2>&1; then
+  W() { cygpath -w "$1"; }
+else
+  W() { printf '%s' "$1"; }
+fi
+
 # 1. 提取 BV 号（支持 b23.tv 短链、完整链接、裸 BV 号）
 BV=$(echo "$INPUT" | grep -oE 'BV[0-9A-Za-z]{10}' | head -1 || true)
 if [ -z "$BV" ]; then
@@ -33,16 +41,22 @@ print('标题:',d['title']); print('UP主:',d['owner']['name']); print('时长:'
 AUDIO_URL=$(curl -s -m 20 -A "$UA" -H "Referer: https://www.bilibili.com/" \
   "https://api.bilibili.com/x/player/playurl?bvid=$BV&cid=$CID&fnval=16" \
   | python -c "import json,sys; print(json.load(sys.stdin)['data']['dash']['audio'][0]['baseUrl'])")
-curl -s -m 120 -A "$UA" -H "Referer: https://www.bilibili.com/" -o "$TMP/audio.m4s" "$AUDIO_URL"
-ffprobe -v error "$TMP/audio.m4s" > /dev/null 2>&1 || { echo "错误：音频下载无效" >&2; exit 1; }
+curl -s -m 120 -A "$UA" -H "Referer: https://www.bilibili.com/" -o "$(W "$TMP/audio.m4s")" "$AUDIO_URL"
+ffprobe -v error "$(W "$TMP/audio.m4s")" > /dev/null 2>&1 || { echo "错误：音频下载无效" >&2; exit 1; }
 
 # 4. 本地 Whisper 转写（国内网络需 hf-mirror，脚本内已设）
 OUT="${OUT:-bili_${BV}.txt}"
 export HF_ENDPOINT=https://hf-mirror.com HF_HUB_DISABLE_XET=1
-# 优先用托管 venv（faster-whisper 装在这里），否则回退 PATH 里的 python
-PY="C:/Users/17876/.workbuddy/binaries/python/envs/default/Scripts/python.exe"
-[ -f "$PY" ] || PY=python
-"$PY" - "$TMP/audio.m4s" "$OUT" <<'PYEOF'
+# Python 探测顺序：WORKBUDDY_PYTHON 环境变量 > ~/.workbuddy 托管 venv（Win/Mac）> PATH
+PY="${WORKBUDDY_PYTHON:-}"
+if [ -z "$PY" ]; then
+  for CAND in "$HOME/.workbuddy/binaries/python/envs/default/Scripts/python.exe" \
+              "$HOME/.workbuddy/binaries/python/envs/default/bin/python"; do
+    [ -f "$CAND" ] && { PY="$CAND"; break; }
+  done
+fi
+[ -n "$PY" ] || PY=python
+"$PY" - "$(W "$TMP/audio.m4s")" "$(W "$OUT")" <<'PYEOF'
 import sys
 from faster_whisper import WhisperModel
 model = WhisperModel("small", device="cpu", compute_type="int8")

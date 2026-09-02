@@ -26,10 +26,10 @@ bash {baseDir}/scripts/bili_transcript.sh "<链接或BV号>" [输出txt路径]
 ## 依赖与环境（一次性）
 
 - ffmpeg/ffprobe、curl（系统自带）
-- faster-whisper 装在托管 venv：`C:/Users/17876/.workbuddy/binaries/python/envs/default/`
-  安装命令：`<venv>/Scripts/pip.exe install faster-whisper`
+- Python 3.8+，`pip install faster-whisper`（首次运行模型缓存约 500MB）
+- 脚本自动探测 Python：环境变量 `WORKBUDDY_PYTHON` > `~/.workbuddy` 托管 venv > PATH 里的 `python`
 - 模型下载走 `HF_ENDPOINT=https://hf-mirror.com HF_HUB_DISABLE_XET=1`（脚本内已设）。
-  **坑**：国内网络直连 HuggingFace 的 xet 下载通道会 401，必须关 xet + 换镜像；模型缓存约 500MB（首次自动下载）
+  **坑**：国内网络直连 HuggingFace 的 xet 下载通道会 401，必须关 xet + 换镜像
 
 ## 边界
 

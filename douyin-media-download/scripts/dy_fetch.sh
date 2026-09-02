@@ -6,12 +6,35 @@
 set -uo pipefail
 
 INPUT="${1:?用法: dy_fetch.sh <链接|modal_id|作品ID> [输出根目录]}"
-OUT_ROOT="${2:-/d/douyinVideo}"
+OUT_ROOT="${2:-${DOUYIN_OUT_ROOT:-$PWD/douyinVideo}}"
 
-CHROME="/c/Program Files/Google/Chrome/Application/chrome.exe"
+# 浏览器探测顺序：CHROME_BIN 环境变量 > Windows 常见路径 > macOS > PATH（Edge 与 Chrome 同参数兼容）
+CHROME="${CHROME_BIN:-}"
+if [ -z "$CHROME" ]; then
+  for CAND in "/c/Program Files/Google/Chrome/Application/chrome.exe" \
+              "/c/Program Files (x86)/Google/Chrome/Application/chrome.exe" \
+              "$HOME/AppData/Local/Google/Chrome/Application/chrome.exe" \
+              "/c/Program Files/Microsoft/Edge/Application/msedge.exe" \
+              "/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe" \
+              "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+              google-chrome chromium; do
+    if [ -f "$CAND" ] || command -v "$CAND" >/dev/null 2>&1; then CHROME="$CAND"; break; fi
+  done
+fi
+[ -n "$CHROME" ] || { echo "[dy] 错误：未找到 Chrome/Edge，可用 CHROME_BIN 环境变量指定路径" >&2; exit 1; }
 UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
-WORK="$(mktemp -d)"
+# 临时目录放输出根下（不用 mktemp/%TEMP%：沙箱与安全钩子对系统 Temp 目录不可靠）
+WORK="$OUT_ROOT/.tmp_$$"
+mkdir -p "$WORK"
 trap 'rm -rf "$WORK"' EXIT
+
+# 原生 Windows 程序（curl/ffmpeg/ffprobe/chrome）不认 POSIX 路径，且部分沙箱环境禁用了
+# MSYS 自动转换（MSYS2_ARG_CONV_EXCL=*）。统一显式转换为 Windows 路径；非 MSYS 环境原样返回。
+if command -v cygpath >/dev/null 2>&1; then
+  W() { cygpath -w "$1"; }
+else
+  W() { printf '%s' "$1"; }
+fi
 
 log() { printf '[dy] %s\n' "$*" >&2; }
 
@@ -37,7 +60,7 @@ log "作品 ID: $ID"
 # ---------- 2. headless 渲染（curl 直抓只有空壳，此步必经）----------
 log "渲染作品页..."
 "$CHROME" --headless=new --disable-gpu --no-first-run \
-  --user-data-dir="$WORK/cp" --window-size=1280,1600 \
+  --user-data-dir="$(W "$WORK/cp")" --window-size=1280,1600 \
   --virtual-time-budget=15000 --timeout=30000 \
   --dump-dom "https://www.douyin.com/video/$ID" > "$WORK/dom.html" 2>/dev/null
 DOM="$WORK/dom.html"
@@ -59,7 +82,7 @@ N_URLS="$(wc -l < "$WORK/vurls.txt")"
 log "抽到 $N_URLS 条签名直链（过期时间戳藏在 URL 中，必须立刻下载）"
 
 # ---------- 5. 下载 + ffprobe 强制断言视频流 ----------
-MP4="$WORK/$ID.mp4"
+MP4="$(W "$WORK/$ID.mp4")"
 OK=0
 while IFS= read -r U; do
   curl -s -m 180 -A "$UA" -H "Referer: https://www.douyin.com/" \
@@ -77,15 +100,18 @@ RES="$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -o
 log "时长 ${DUR}s，分辨率 ${RES}"
 
 # ---------- 6. 转 GIF（体积经验值：360px/12fps ≈ 1.4MB/秒）----------
-FPS=12; W=360
-awk "BEGIN{exit !(${DUR%.*} > 8)}" && { FPS=10; W=320; }
+FPS=12; W_=360
+awk "BEGIN{exit !(${DUR%.*} > 8)}" && { FPS=10; W_=320; }
 mkdir -p "$OUT_ROOT/video" "$OUT_ROOT/gif"
+PAL="$(W "$WORK/pal.png")"
+GIF="$(W "$OUT_ROOT/gif/$ID.gif")"
+MP4OUT="$(W "$OUT_ROOT/video/$ID.mp4")"
 ffmpeg -y -loglevel error -i "$MP4" \
-  -vf "fps=$FPS,scale=$W:-2:flags=lanczos,palettegen=stats_mode=diff" "$WORK/pal.png"
-ffmpeg -y -loglevel error -i "$MP4" -i "$WORK/pal.png" \
-  -lavfi "fps=$FPS,scale=$W:-2:flags=lanczos [x]; [x][1:v] paletteuse=dither=bayer:bayer_scale=3" \
-  -loop 0 "$OUT_ROOT/gif/$ID.gif"
+  -vf "fps=$FPS,scale=$W_:-2:flags=lanczos,palettegen=stats_mode=diff" "$PAL"
+ffmpeg -y -loglevel error -i "$MP4" -i "$PAL" \
+  -lavfi "fps=$FPS,scale=$W_:-2:flags=lanczos [x]; [x][1:v] paletteuse=dither=bayer:bayer_scale=3" \
+  -loop 0 "$GIF"
 
-cp "$MP4" "$OUT_ROOT/video/$ID.mp4"
+cp "$WORK/$ID.mp4" "$OUT_ROOT/video/$ID.mp4"
 log "完成: $OUT_ROOT/video/$ID.mp4 + $OUT_ROOT/gif/$ID.gif"
 log "$TITLE"

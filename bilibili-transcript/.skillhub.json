@@ -1,0 +1,8 @@
+{
+  "name": "bilibili-transcript",
+  "description": "B 站视频口播转文字：短链/链接/BV号 → 元信息 → 音频流 → 本地 Whisper 转写（带时间戳）。用于内容分析、总结、事实核查",
+  "category": "productivity",
+  "visibility": "public",
+  "skill_id": "2a966f55-bdc6-49b8-9880-6cc9a9e674aa",
+  "slug": "a3520852/bilibili-transcript"
+}
