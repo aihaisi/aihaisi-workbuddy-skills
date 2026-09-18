@@ -1,6 +1,6 @@
 ---
 name: workbuddy-skills-repo-sync
-description: 提交并推送 WorkBuddy 个人技能库（~/.workbuddy/skills，远端 aihaisi-workbuddy-skills）到 GitHub。包含发布级脱敏扫描、密钥扫描、嵌套仓库卫生检查、以及在本机校园网下绕开失效的 SSH pushurl 走 HTTPS 代理推送的完整流程。当用户说"技能仓库提交推送""把技能库同步一下""推一下 skills""技能库归档"时使用。
+description: 提交并推送 WorkBuddy 个人技能库（~/.workbuddy/skills，远端 aihaisi-workbuddy-skills）到 GitHub。包含发布级脱敏扫描、密钥扫描、嵌套仓库卫生检查、在本机校园网下绕开失效的 SSH pushurl 走 HTTPS 代理推送、以及推送后的远端核验（本机 git 写不进 refs/remotes，须用 ls-remote + 浅克隆代替）的完整流程。当用户说"技能仓库提交推送""把技能库同步一下""推一下 skills""技能库归档"时使用。
 agent_created: true
 ---
 
@@ -152,21 +152,56 @@ HTTPS 走全局 `http.<host>.proxy` → `127.0.0.1:7897`（Clash 混合端口，
 
 因为 fetch 也走 SSH 而失败，`refs/remotes/origin/main` 是**过期的**，ahead/behind 判断失真。
 
-修正（用 HTTPS 显式拉一次追踪引用）：
+### ⚠️ 实测修正（2026-09-18）：本机 git **写不进** `refs/remotes/**`
+
+原先记的「用 `git fetch` 显式拉一次追踪引用」**在本机无效**。实测：
 
 ```bash
-GIT_TERMINAL_PROMPT=0 timeout 180 \
-  git fetch "https://github.com/aihaisi/aihaisi-workbuddy-skills.git" main:refs/remotes/origin/main
+GIT_TERMINAL_PROMPT=0 git fetch "$URL" main:refs/remotes/origin/main   # 输出 * [new branch]  main -> origin/main
+ls -R .git/refs/remotes/        # ← 仍然是空的
+git show-ref                    # ← 只有 refs/heads/main
 ```
+
+`git update-ref refs/remotes/origin/main HEAD` 同样：**exit 0、reflog 已写、但引用文件不生成**。
+
+**不是路径问题**——对照实验证明：同一路径、同一内容用 shell 重定向写入后，
+`git rev-parse` / `git show-ref` 都能正常识别；`refs/heads/**` 的写入也完全正常。
+所以是 `git update-ref` / `git fetch` 写 `refs/remotes/**` 时**静默失败**（不报错）。
+
+**后果**：`origin/main` 永远不存在 → `git status` 永久显示 `ahead N`，
+`git ls-tree origin/main` 报 `fatal: Not a valid object name`。**别把这两个当异常去排查。**
+
+**替代做法（三条，都不要依赖 fetch 修 ahead）**
+
+1. **远端提交核验** —— `git ls-remote` 直接读远端，不需要本地引用：
+   ```bash
+   git rev-parse HEAD
+   GIT_TERMINAL_PROMPT=0 git ls-remote "$URL" refs/heads/main    # 两者必须一致
+   ```
+2. **远端内容核验** —— 一次性浅克隆，再用 **git 自己的命令**读
+   （工作区外的路径 `ls` 可能读不到，但 git 能读）：
+   ```bash
+   GIT_TERMINAL_PROMPT=0 timeout 240 git clone -q --depth 1 "$URL" /tmp/verifyclone
+   git -C /tmp/verifyclone ls-files | wc -l                 # 文件总数
+   git -C /tmp/verifyclone ls-files | grep <新增技能目录>     # 新内容确实上去了
+   git -C /tmp/verifyclone grep -n "<关键字>" -- README.md
+   git -C /tmp/verifyclone grep -n "17876" -- .             # 远端实际内容再脱敏复核一遍
+   ```
+3. **让 `git status` 恢复正常显示**（唯一有效的办法，手工写引用）：
+   ```bash
+   RH=$(GIT_TERMINAL_PROMPT=0 git ls-remote "$URL" refs/heads/main | cut -f1)
+   mkdir -p .git/refs/remotes/origin
+   printf '%s\n' "$RH" > .git/refs/remotes/origin/main
+   git status -sb        # 应显示 ## main...origin/main，无 ahead/behind
+   ```
 
 ## 7. 核验（必须做，不能只看 push 输出）
 
 ```bash
 URL="https://github.com/aihaisi/aihaisi-workbuddy-skills.git"
 git rev-parse HEAD
-GIT_TERMINAL_PROMPT=0 git ls-remote "$URL" refs/heads/main    # 两者必须一致
-git ls-tree --name-only origin/main | grep <新增目录>          # 新内容确实上去了
-git status -sb                                                # 应显示 ## main...origin/main 无分叉
+GIT_TERMINAL_PROMPT=0 git ls-remote "$URL" refs/heads/main    # 与上一条必须一致
+# 远端内容：见 §6「远端内容核验」，用浅克隆 + git -C 读（不要用 git ls-tree origin/main，本机该引用写不进去）
 ```
 
 ## 8. 收尾
@@ -183,4 +218,5 @@ git status -sb                                                # 应显示 ## mai
 | 远端 | `aihaisi/aihaisi-workbuddy-skills.git` |
 | 代理 | `127.0.0.1:7897`，Clash 规则模式，需 `dangerouslyDisableSandbox` |
 | pushurl 现状 | SSH —— **本机不可用**，一律显式 HTTPS URL |
+| `refs/remotes/**` | **写不进**（`git fetch`/`update-ref` 静默失败）→ `git status` 永久 ahead，改用 `ls-remote` + 浅克隆核验 |
 | 推送前置 | 脱敏扫描 → 密钥扫描 → 嵌套仓库检查 → `GIT_TERMINAL_PROMPT=0` |
