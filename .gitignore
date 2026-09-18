@@ -1,0 +1,17 @@
+# ── 第三方技能（外部来源，不纳入本仓库） ──────────────────────────
+# ginger_wechat_portrait：上游 Jiang59991/ginger_wechat_portrait，
+# 无 LICENSE（默认保留全部权利），且自带 .git。本仓库只登记来源，不转发其代码。
+# 重新安装：git clone https://github.com/Jiang59991/ginger_wechat_portrait.git
+ginger_wechat_portrait/
+
+# ── Python 编译产物 ───────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# ── 运行时数据 / 临时文件 ─────────────────────────────────────────
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
