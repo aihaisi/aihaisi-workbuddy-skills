@@ -7,6 +7,7 @@
 | 技能 | 说明 |
 |---|---|
 | [`douyin-media-download`](douyin-media-download/) | 抖音视频/图文/实况图下载管线：Chrome headless 渲染 → 特征抽签名直链 → 即取即下 → ffprobe 断言 → palettegen 转 GIF。附一键脚本 `dy_fetch.sh`，产物按 `video/<作品ID>.mp4` + `gif/<作品ID>.gif` 归档 |
+| [`beamer-bilingual-deck`](beamer-bilingual-deck/) | 中英同页双语 Beamer 幻灯片：ctexbeamer 主题与双语宏骨架、帧标题色带几何（负 `\vspace` 铁律）、纵向溢出处理顺序与 `shrink` 非直觉语义、开工前预检清单，以及 pdftoppm + pdftotext 的逐页版面量化审计（`scripts/layout_audit.py` / `scripts/band_geometry.py`） |
 | [`self-improving-agent`](self-improving-agent/) / [`self-improving`](self-improving/) | Agent 自进化：错误捕获 → 学习沉淀 → 技能迭代 |
 | [`proactive-agent`](proactive-agent/) | 从被动执行到主动预判的 Agent 行为模式 |
 | [`skill-creator`](skill-creator/) | 技能本身的创建 / 校验 / 打包工具链 |
@@ -17,6 +18,7 @@
 - **特征定位，不写死索引** —— 目标系统的数据位置会变，按内容特征找才可复现
 - **断言进脚本，不靠人肉** —— 每个下载产物过 ffprobe，每条管线出口有校验
 - **骨架固定，关节判别** —— 确定性流程写死，易变环节按现场特征分支
+- **先验证，后动手** —— 影响面大的参数先在单点上试跑，外部素材先做健康度抽检；证伪成本要排在动作之前，不要推到下游返工
 - **公开前扫密钥** —— 模式匹配全库扫描 token/key 后才推送
 
 ## 外部来源技能（只登记，不纳入本仓库）
