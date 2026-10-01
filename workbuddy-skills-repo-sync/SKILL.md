@@ -30,11 +30,28 @@ cd "$HOME/.workbuddy/skills" && git status --short
 
 这是仓库创建者（用户本人）确立的规则：**公开仓库里不得出现本机用户名/绝对路径**。
 
+⚠️ **别用 `git ls-files` —— 它只列已跟踪文件，新增技能目录是 untracked，会整段逃过扫描。**
+（2026-10-01 实测：4 个新技能正文里写的本机绝对路径全部漏网，差点直接推上去。）
+
+扫**整个工作区**：
+
 ```bash
 cd "$HOME/.workbuddy/skills"
-git ls-files -z | xargs -0 grep -ln "17876" 2>/dev/null
-git ls-files -z | xargs -0 grep -ln 'C:\\Users' 2>/dev/null
+grep -rlnE "17876|C:[\\/]Users" . --exclude-dir=.git
 ```
+
+再补一条**比用户名更敏感**的（学号 / 真实姓名 / 手机号）—— 简历类技能很容易把真名和学号当「例子」写进正文：
+
+```bash
+# 手机号：必须锚定数字边界，否则会大量误吃 13 位毫秒时间戳（publishedAt / task_id）
+grep -rnE "(^|[^0-9])1[3-9][0-9]{9}([^0-9]|$)" . --exclude-dir=.git
+# 学号 / 真实姓名：自行填入具体值。⚠️ 别把值写进本文件 —— 写进来就等于又泄露一次
+grep -rlnE "<学号>|<真实姓名>" . --exclude-dir=.git
+```
+
+⚠️ **别用 `cmd && echo 有 || echo "(无命中)"` 这种写法做扫描** —— 命令自身报错（参数顺序写错、
+引号没配对）时也会走到 `||` 分支，把「扫描根本没跑」伪装成「干净」。要做就用**退出码判定**：
+`git grep -q <pattern>; echo "rc=$?"`（rc=1 才是真无命中，rc=2 是命令出错）。
 
 命中就改，替换对照表：
 
@@ -50,11 +67,13 @@ MSYS 环境下路径转换会被禁用，脚本里改用 **`cygpath` 显式转�
 
 ⚠️ **给文档写命令示例时也要遵守** —— 别在技能自身的说明里留 `C:/Users/<用户名>`，用 `$HOME` 代替，否则下次扫描会命中自己。
 
-⚠️ **两个已知的假阳性 / 陷阱**
+⚠️ **已知的假阳性 / 陷阱**
 
 | 现象 | 说明 |
 |---|---|
 | 扫描命令命中**它自己** | 命令串里就含 `17876`，属预期，忽略 |
+| 占位符 `<user>` / `<用户名>` / `x` | 如 `C:/Users/<user>/.gitconfig`、`C:/Users/x/zh.srt` —— **不是真名，保留**。技术示例要准确，别为了讨好正则改成错的写法 |
+| `__pycache__/*.pyc` | 编译产物里会嵌进源码中的路径；已被 `.gitignore` 忽略，不入库即可 |
 | `_skillhub_meta.json` 的 `iconLocalPath` | 见下方专条 |
 
 ### `iconLocalPath` —— 别试图脱敏，直接不跟踪
@@ -152,7 +171,7 @@ HTTPS 走全局 `http.<host>.proxy` → `127.0.0.1:7897`（Clash 混合端口，
 
 因为 fetch 也走 SSH 而失败，`refs/remotes/origin/main` 是**过期的**，ahead/behind 判断失真。
 
-### ⚠️ 实测修正（2026-09-18）：本机 git **写不进** `refs/remotes/**`
+### ⚠️ 实测修正（2026-09-18）：`git fetch <refspec>` / `update-ref` 写 `refs/remotes/**` 会**静默失败**
 
 原先记的「用 `git fetch` 显式拉一次追踪引用」**在本机无效**。实测：
 
@@ -168,8 +187,14 @@ git show-ref                    # ← 只有 refs/heads/main
 `git rev-parse` / `git show-ref` 都能正常识别；`refs/heads/**` 的写入也完全正常。
 所以是 `git update-ref` / `git fetch` 写 `refs/remotes/**` 时**静默失败**（不报错）。
 
-**后果**：`origin/main` 永远不存在 → `git status` 永久显示 `ahead N`，
+**后果**：走这条路径时 `origin/main` 建不起来 → `git status` 持续显示 `ahead N`，
 `git ls-tree origin/main` 报 `fatal: Not a valid object name`。**别把这两个当异常去排查。**
+
+✅ **2026-09-23 更正（原结论被过度推广成"本机写不进 refs"）**：在新建的 `elaina-mushroom-nim` 仓库（HTTPS remote）上执行
+`git push -u origin main` 后，`.git/refs/remotes/origin/main` **正常生成** —— `git show-ref` 两条引用齐全、
+`git rev-parse origin/main` 返回正确 SHA、`git status -sb` 显示 `## main...origin/main` 且无 ahead。
+所以准确说法是：**失败的是「显式 refspec 的 `git fetch` / `git update-ref`」这条路径，不是本机文件系统**。
+新仓库首次推送优先用 `git push -u origin main`；核验一律仍以 `git ls-remote` 为准。
 
 **替代做法（三条，都不要依赖 fetch 修 ahead）**
 
@@ -206,7 +231,7 @@ GIT_TERMINAL_PROMPT=0 git ls-remote "$URL" refs/heads/main    # 与上一条必�
 
 ## 8. 收尾
 
-- 新增/修改技能时，**同步 `_skillhub_meta.json` 与迁移标记**（WorkBuddy 会生成，一并提交）。
+- `_skillhub_meta.json` **不再跟踪**（理由见 §2）—— WorkBuddy 照常把它生成在磁盘上，别去 `git add` 它。
 - 每次操作后更新长期记忆（`~/.workbuddy/MEMORY.md`）里的「技能库 git 仓库」段——当前网络事实会变。
 
 ## 本机常量速查
@@ -218,5 +243,5 @@ GIT_TERMINAL_PROMPT=0 git ls-remote "$URL" refs/heads/main    # 与上一条必�
 | 远端 | `aihaisi/aihaisi-workbuddy-skills.git` |
 | 代理 | `127.0.0.1:7897`，Clash 规则模式，需 `dangerouslyDisableSandbox` |
 | pushurl 现状 | SSH —— **本机不可用**，一律显式 HTTPS URL |
-| `refs/remotes/**` | **写不进**（`git fetch`/`update-ref` 静默失败）→ `git status` 永久 ahead，改用 `ls-remote` + 浅克隆核验 |
+| `refs/remotes/**` | 显式 refspec 的 `git fetch` / `update-ref` 会静默失败；但 **`git push -u origin <branch>` 能正常建好追踪引用**（2026-09-23 更正） |
 | 推送前置 | 脱敏扫描 → 密钥扫描 → 嵌套仓库检查 → `GIT_TERMINAL_PROMPT=0` |
