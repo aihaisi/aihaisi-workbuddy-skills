@@ -203,7 +203,26 @@ git -c http.https://github.com.proxy= ls-remote https://github.com/OWNER/REPO.gi
 Thumbs.db
 node_modules/
 *.log
+
+# 生成物：能由脚本重建的一律不进版本库
+_out/
+_gltest.html
+_iso.html
 ```
+
+判据：**「这条命令能不能重建它？」** 能 → ignore，不能 → 提交。
+把拼装产物（`_gltest.html` 这种由 `index.html` + 驱动脚本拼出来的）提交进去，
+下次重建就会产生一个巨大的假 diff，把真实改动埋掉。
+
+顺手加 `.gitattributes`，避免 Windows / macOS 之间换行符来回翻转：
+
+```
+* text=auto eol=lf
+*.bat text eol=crlf
+*.png binary
+```
+
+不加的话 `git add` 会刷一屏 `LF will be replaced by CRLF` 警告，且协作方检出后整棵树显示成已修改。
 
 ### 4.2 README 写作要求
 
@@ -222,6 +241,50 @@ node_modules/
 cd <项目目录> && git status --short          # 确认敏感目录未被纳入
 git ls-files                                 # 逐条看一遍
 ```
+
+### 4.4 ⚠️ 可移植性自查（公开前必做，2026-10-01 实测踩到）
+
+**症状**：项目在你机器上跑得好好的，一公开别人拉下来第一步就挂 —— 因为脚本里挂着**本机私有路径**
+（`~/.workbuddy/skills/...`、带版本号的 node 绝对路径、`D:\Software\...`）。
+
+一条命令扫出来：
+
+```bash
+git grep -nE "\.workbuddy|USERPROFILE|HOMEPATH|[A-Z]:\\\\Users|[A-Z]:\\\\Software" -- .
+echo "rc=$?   # 1 = 干净（用退出码判定；不要写 cmd && echo 有 || echo 无）"
+```
+
+命中分两类，处理方式不同：
+
+| 类型 | 例子 | 处理 |
+|---|---|---|
+| **死路径**：指向只有你有的东西 | `~/.workbuddy/skills/<skill>/scripts/x.py` | 把脚本**复制进项目**，或改成调用项目内已有的等价脚本 |
+| **可回退的兜底**：只是「优先用某个安装」 | `~/.workbuddy/binaries/node/versions/22.22.2-3/node.exe` | 改成 **`$NODE` → PATH(`shutil.which`) → 常见安装目录** 的探测链 |
+
+外部工具探测的通用写法（Chrome / node / ffmpeg 都适用）：
+
+```python
+def find_tool():
+    """$<TOOL> 覆盖 → PATH → 常见安装目录。永远不要写死版本号。"""
+    if os.environ.get('TOOL') and os.path.exists(os.environ['TOOL']):
+        return os.environ['TOOL']
+    w = shutil.which('tool')
+    if w:
+        return w
+    for c in (r"C:\Program Files\Vendor\tool.exe", ...):
+        if os.path.exists(c):
+            return c
+    return 'tool'          # 退回让 PATH 再试一次，报错信息也更好懂
+```
+
+**⚠️ 硬编码版本号是这里最容易犯的错**：`.../node/versions/22.22.2-3/node.exe` 在你机器上存在，
+在别人机器上 100% 不存在，而且是**静默**的 —— 直到别人真去跑那条命令才暴露。
+README 里宣传的「一条命令跑完验证」必须在这台机器之外也成立。
+
+另外注意：`.bat` 一律纯 ASCII + CRLF（见工作区其他笔记），Bash 侧改完要确认换行符没被转成 LF。
+
+改完**在本地把那条验证命令重跑一次**，确认探测链真的解析到了工具（把解析结果打印出来更好），再提交。
+别只看代码改对了就推 —— 探测链写错时不会报错，只会选到一个不存在的路径然后在更晚的地方失败。
 
 ## 5. 建仓 + 绑定远端
 
