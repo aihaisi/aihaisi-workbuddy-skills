@@ -7,7 +7,9 @@
 | 技能 | 说明 |
 |---|---|
 | [`douyin-media-download`](douyin-media-download/) | 抖音视频/图文/实况图下载管线：Chrome headless 渲染 → 特征抽签名直链 → 即取即下 → ffprobe 断言 → palettegen 转 GIF。附一键脚本 `dy_fetch.sh`，产物按 `video/<作品ID>.mp4` + `gif/<作品ID>.gif` 归档 |
-| [`beamer-bilingual-deck`](beamer-bilingual-deck/) | 中英同页双语 Beamer 幻灯片：ctexbeamer 主题与双语宏骨架、帧标题色带几何（负 `\vspace` 铁律）、纵向溢出处理顺序与 `shrink` 非直觉语义、开工前预检清单，以及 pdftoppm + pdftotext 的逐页版面量化审计（`scripts/layout_audit.py` / `scripts/band_geometry.py`） |
+| [`latex-cn-typesetting`](latex-cn-typesetting/) | 用 XeLaTeX 做中文排版成品：简历 CV（单页压缩、照片、二维码、长链接按模块尺寸反推宽度）+ Beamer 双语幻灯片（帧标题色带几何与负 `\vspace` 铁律、`shrink` 非直觉语义、纵向溢出处理顺序）。两者共用的编译两遍、Overfull 处理与 pdftoppm/pdftotext 版面量化审计写在统一章节（`scripts/layout_audit.py` / `scripts/band_geometry.py`） |
+| [`html-prototype-verify-ship`](html-prototype-verify-ship/) | 单文件 HTML 原型的验证与发布三段式：① DOM 桩 + node vm 逻辑冒烟 ② 无头 Chrome + iframe 精确视口查横向出界 ③ 发布成「点开即玩」的分享链接（发布源目录隔离 + 一致性断言 + 上线后泄漏专检）。深挖内容在 `references/` |
+| [`gameplay-design-verification`](gameplay-design-verification/) | 玩法设计的可计算验证：设计期用四层策略（随机/贪心/规划/全知）测规划增益、技能表达与 UX 体检，十条判据判「有没有决策空间」；实现期用暴力博弈树 DP 逐状态验证 AI 最优性并做自对弈对账。含统一的断言纪律与变异测试 |
 | [`self-improving-agent`](self-improving-agent/) / [`self-improving`](self-improving/) | Agent 自进化：错误捕获 → 学习沉淀 → 技能迭代 |
 | [`proactive-agent`](proactive-agent/) | 从被动执行到主动预判的 Agent 行为模式 |
 | [`skill-creator`](skill-creator/) | 技能本身的创建 / 校验 / 打包工具链 |

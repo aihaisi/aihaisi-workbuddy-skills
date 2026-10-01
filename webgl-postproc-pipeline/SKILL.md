@@ -311,6 +311,5 @@ hits.forEach(h => { for (let i = h.at; i < h.at + h.len; i++) mask[i] = true; })
 
 ## 相关技能
 
-- 布局/响应式问题（顶栏在窄屏被裁、元素横向出界）走 `verify-responsive-layout-headless`，不要在本技能里重复造。
-- 单文件 HTML 原型的无浏览器冒烟测试走 `html-prototype-smoke-test`。
-- 断言失效模式（恒真式／空集恒真／统计抽样／过拟合钉实现细节）与变异测试纪律走 `game-ai-optimality-verification`。
+- 单文件 HTML 原型的**交付期验证**（DOM 桩冒烟断言、无头 Chrome 真渲染布局、发布成分享链接）走 `html-prototype-verify-ship`，不要在本技能里重复造。
+- **玩法/算法层**的可计算验证（这个玩法有没有决策空间、AI 是不是真的最优）、以及断言失效模式（恒真式／空集恒真／统计抽样／过拟合钉实现细节）与变异测试纪律，走 `gameplay-design-verification`。
