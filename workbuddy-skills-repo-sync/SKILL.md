@@ -190,6 +190,25 @@ git show-ref                    # ← 只有 refs/heads/main
 
 `git update-ref refs/remotes/origin/main HEAD` 同样：**exit 0、reflog 已写、但引用文件不生成**。
 
+### ⚠️ 手工修追踪引用时必须判空（否则比原问题更糟）
+
+既然是手工 `printf > .git/refs/remotes/origin/main`，那**远端读取失败时会把空串写进去** —— 空引用比过期引用更糟：`git status -sb` 会显示 `[gone]`，看起来像远端分支被删了。
+
+代理偶发抖动就会触发（实测 2026-10-01 遇到一次 `schannel: failed to receive handshake`）。**必须判空 + 重试**：
+
+```bash
+RH=""
+for i in 1 2 3; do
+  RH=$(GIT_TERMINAL_PROMPT=0 timeout 120 git ls-remote "$URL" refs/heads/main 2>/dev/null | cut -f1)
+  [ -n "$RH" ] && break
+done
+[ -z "$RH" ] && { echo "远端读取失败，不要写引用"; exit 1; }
+printf '%s\n' "$RH" > .git/refs/remotes/origin/main
+[ "$RH" = "$(git rev-parse HEAD)" ] && echo "一致 ✅" || echo "不一致 ❌ 需排查"
+```
+
+最后那行一致性自检是重点 —— 只写不比对，等于把"我以为推上去了"固化进本地状态。
+
 **不是路径问题**——对照实验证明：同一路径、同一内容用 shell 重定向写入后，
 `git rev-parse` / `git show-ref` 都能正常识别；`refs/heads/**` 的写入也完全正常。
 所以是 `git update-ref` / `git fetch` 写 `refs/remotes/**` 时**静默失败**（不报错）。
