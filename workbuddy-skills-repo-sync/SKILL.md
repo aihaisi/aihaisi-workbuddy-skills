@@ -37,7 +37,9 @@ cd "$HOME/.workbuddy/skills" && git status --short
 
 ```bash
 cd "$HOME/.workbuddy/skills"
-grep -rlnE "17876|C:[\\/]Users" . --exclude-dir=.git
+# 用户名用 $(whoami) 动态取 —— 别把真名写死在这条命令里。
+# 早期版本直接写死了本机用户名，结果命令自己成了库里唯一的泄露源（2026-10-27 修正）。
+grep -rlnE "$(whoami)|C:[\\/]Users" . --exclude-dir=.git
 ```
 
 再补一条**比用户名更敏感**的（学号 / 真实姓名 / 手机号）—— 简历类技能很容易把真名和学号当「例子」写进正文：
@@ -78,7 +80,7 @@ MSYS 环境下路径转换会被禁用，脚本里改用 **`cygpath` 显式转�
 
 | 现象 | 说明 |
 |---|---|
-| 扫描命令命中**它自己** | 命令串里就含 `17876`，属预期，忽略 |
+| 扫描命令命中**它自己** | 已修：命令改用 `$(whoami)` 动态取用户名，本文件不再含真名（2026-10-27）。若又出现，说明有人把用户名重新写死了 |
 | 占位符 `<user>` / `<用户名>` / `x` | 如 `C:/Users/<user>/.gitconfig`、`C:/Users/x/zh.srt` —— **不是真名，保留**。技术示例要准确，别为了讨好正则改成错的写法 |
 | `__pycache__/*.pyc` | 编译产物里会嵌进源码中的路径；已被 `.gitignore` 忽略，不入库即可 |
 | `_skillhub_meta.json` 的 `iconLocalPath` | 见下方专条 |
@@ -236,7 +238,7 @@ printf '%s\n' "$RH" > .git/refs/remotes/origin/main
    git -C /tmp/verifyclone ls-files | wc -l                 # 文件总数
    git -C /tmp/verifyclone ls-files | grep <新增技能目录>     # 新内容确实上去了
    git -C /tmp/verifyclone grep -n "<关键字>" -- README.md
-   git -C /tmp/verifyclone grep -n "17876" -- .             # 远端实际内容再脱敏复核一遍
+   git -C /tmp/verifyclone grep -nE "$(whoami)" -- .    # 远端实际内容再脱敏复核一遍
    ```
 3. **让 `git status` 恢复正常显示**（唯一有效的办法，手工写引用）：
    ```bash
