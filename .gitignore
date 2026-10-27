@@ -4,6 +4,61 @@
 # 重新安装：git clone https://github.com/Jiang59991/ginger_wechat_portrait.git
 ginger_wechat_portrait/
 
+# mattpocock/skills（38 个：工程 20 / 生产力 7 / in-progress 7 / misc 4），
+# 上游 https://github.com/mattpocock/skills（MIT，Matt Pocock），审计通过（0 P0 / 0 P1）。
+# 本地源克隆 D:\Software\mattpocock-skills；升级 = git pull --ff-only 后重跑「更新技能.bat」。
+# 同 ginger 惯例：只登记来源，不转发其代码。
+/ask-matt/
+/code-review/
+/codebase-design/
+/diagnosing-bugs/
+/domain-modeling/
+/grill-with-docs/
+/implement/
+/implement-spec/
+/improve-codebase-architecture/
+/pr/
+/prototype/
+/research/
+/retro/
+/setup-matt-pocock-skills/
+/tdd/
+/to-spec/
+/to-tickets/
+/triage/
+/wayfinder/
+/wizard/
+/grill-me/
+/grilling/
+/handoff/
+/teach/
+/to-questionnaire/
+/wait-what/
+/writing-for-agents/
+/chief-of-staff/
+/claude-handoff/
+/loop-me/
+/setup-ts-deep-modules/
+/writing-beats/
+/writing-fragments/
+/writing-shape/
+/git-guardrails-claude-code/
+/migrate-to-shoehorn/
+/scaffold-exercises/
+/setup-pre-commit/
+
+# alipay-aipay：支付宝官方「AI 付接入」Skill（npm 分发，VERSION 1.7.0），
+# 上游无 LICENSE 文件（默认保留全部权利），且自带 self-update 拉 alipay-cli —— 属安装器产物。
+# 112 文件 / 1.7 MB 全是官方 SDK 文档与代码示例，不转发。
+# 重装：在 SkillHub / 官方渠道检索 alipay-aipay
+/alipay-aipay/
+
+# reverse-engineer-anything（REA）：上游 https://github.com/morluto/rea（npm rea-agents@6.7.0，metadata version 42）。
+# 上游无 LICENSE 文件（默认保留全部权利）；且目录里留有 .rea.backup 安装备份，属安装器产物。
+# 同 ginger 惯例：只登记来源，不转发其代码。
+# 重装：npx -y rea-agents@6.7.0
+/reverse-engineer-anything/
+
 # ── Python 编译产物 ───────────────────────────────────────────────
 __pycache__/
 *.pyc

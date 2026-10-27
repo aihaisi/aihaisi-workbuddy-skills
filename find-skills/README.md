@@ -57,11 +57,19 @@ find-skills/
 └── .gitignore         # Git 忽略规则
 ```
 
-## 作者
+## 关于作者
 
-**Kyle** · 桂皮AI实战
+**桂皮 Guipi** — AI Agent 开发者 · 超级个体践行者
+专注 AI 效率工具与一人公司方法论，帮普通人用 AI 成为超级个体
 
-> 💝 更多实用 AI 效率工具和技能，关注公众号「桂皮AI实战」
+| 平台 | 账号 |
+|------|------|
+| 🐙 GitHub | [guipi888](https://github.com/guipi888) |
+| 💬 微信 | guipi996（注明来意）|
+
+## 相关项目
+
+- [video-skill-router](https://github.com/guipi888/video-skill-router) — 视频创作技能路由器：AI video / animation skill 元技能，判定视频类别（商业宣传/知识科普/其他）→ 自动发现并安装 Manim/Remotion/Lottie 等技能包 → 编排执行输出成片。找技能是第一步，找到之后还要下载、安装、编排执行——video-skill-router 补上这后半段
 
 ## License
 
